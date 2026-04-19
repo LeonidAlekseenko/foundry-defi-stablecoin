@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.18;
 
-import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+//import {ERC20Burnable, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {DecentralizedStableCoin} from "src/DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/interfaces/AggregatorV3Interface.sol";
@@ -12,10 +12,12 @@ contract DSCEngine is ReentrancyGuard {
     /*//////////////////////////////////////////////////////////////
                                 Errors
     //////////////////////////////////////////////////////////////*/
-    error DSCEngine_NeedsMoreThanZero();
-    error DSCEngine_TokenAddressAndPriceFeedAddressesMustBeSameLength();
-    error DSCEngine_NoAllowedToken();
-    error DSCEngine_TransferFailed();
+    error DSCEngine__NeedsMoreThanZero();
+    error DSCEngine__TokenAddressAndPriceFeedAddressesMustBeSameLength();
+    error DSCEngine__NoAllowedToken();
+    error DSCEngine__TransferFailed();
+    error DSCEngine__HealthFactorIsBellowMinimum();
+    error DSCEngine__MintFailed();
 
     /*//////////////////////////////////////////////////////////////
                             State Variables
@@ -24,6 +26,7 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant PRECISION = 1e18;
     uint256 private constant LIQUIDATION_THRESHOLD = 50; //200$
     uint256 private constant LIQUIDATION_PRECISION = 100;
+    uint256 private constant MIN_HEALTH_FACTOR = 1e18;
 
     /// @dev фиды
     mapping(address token => address priceFeed) private s_priceFeeds;
@@ -50,14 +53,14 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     modifier moreThanZero(uint256 amount) {
         if (amount == 0) {
-            revert DSCEngine_NeedsMoreThanZero();
+            revert DSCEngine__NeedsMoreThanZero();
         }
         _;
     }
 
     modifier isAlowedToken(address token) {
         if (address(token) == address(0)) {
-            revert DSCEngine_NoAllowedToken();
+            revert DSCEngine__NoAllowedToken();
         }
         _;
     }
@@ -69,7 +72,7 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     constructor(address[] memory tokenAddress, address[] memory priceFeedAddress, address dscAddress) {
         if (tokenAddress.length != priceFeedAddress.length) {
-            revert DSCEngine_TokenAddressAndPriceFeedAddressesMustBeSameLength();
+            revert DSCEngine__TokenAddressAndPriceFeedAddressesMustBeSameLength();
         }
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             s_priceFeeds[tokenAddress[i]] = priceFeedAddress[i];
@@ -101,7 +104,7 @@ contract DSCEngine is ReentrancyGuard {
         bool success = IERC20(tokenCollateralAddress).transferFrom(msg.sender, address(this), amountCollateral);
 
         if (!success) {
-            revert DSCEngine_TransferFailed();
+            revert DSCEngine__TransferFailed();
         }
     }
 
@@ -109,21 +112,44 @@ contract DSCEngine is ReentrancyGuard {
 
     function redeemCollateral() external {}
 
+
+    /// Минт стейбла
+    /// @param amountDscToMint - количество стейблов   
+    /// @dev  _revertIfHealthFactorIsBroken(msg.sender) revert if HF < 1e18
     function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
         s_DSCMinted[msg.sender] += amountDscToMint;
         _revertIfHealthFactorIsBroken(msg.sender);
+        bool minted = i_dsc.mint(msg.sender, amountDscToMint);
+        if (!minted) {
+            revert DSCEngine__MintFailed();
+        }
     }
 
     function burnDsc() public {}
 
     function liquidate() external {}
 
+    /// Фактор здоровья
+    /// @param user - Адресс пользователя
+    /// @dev totalDscMinted - сколько пользователь занял (долг)
+    /// @dev collateralValueInUsd - стоимость его залога в USD
+    /// @dev collateralAdjustedForThreshold - обеспечение, cкорректированное c учетом порогового Значения
     function _healthFactor(address user) private view returns (uint256) {
         (uint256 totalDscMinted, uint256 collateralValueInUsd) = _getAccountInformation(user);
+                     //500е18                          //1000е18                   //50                     //100
+        uint256 collateralAdjustedForThreshold = (collateralValueInUsd * LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+        //500е18                    1e18           500е18
+        return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
+        // 500е18 * 1е18 = 500е36, 500e36 / 500e18 = 1e18
     }
 
+    /// функция реверта если _healthFactor < 1e18
+    /// @param user - адр польз
     function _revertIfHealthFactorIsBroken(address user) internal view {
-        
+        uint256 userHealthFactor = _healthFactor(user);
+        if (userHealthFactor < MIN_HEALTH_FACTOR) {
+            revert DSCEngine__HealthFactorIsBellowMinimum();
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -133,6 +159,7 @@ contract DSCEngine is ReentrancyGuard {
 
     /// Стоимость всего залога в долларах США
     /// @param user - адрес пользователя.
+    /// @return totalCollateralValueInUsd - общая Стоимость Обеспечения В Долларах Сша
     function getAccountCollateralValue(address user) public view returns (uint256 totalCollateralValueInUsd) {
         for (uint256 i = 0; i < s_collateralTokens.length; i++) {
             address token = s_collateralTokens[i];
@@ -154,9 +181,10 @@ contract DSCEngine is ReentrancyGuard {
         collateralValueInUsd = getAccountCollateralValue(user);
     }
 
-    /// стоимость залога в долларах
+    /// переводит токены в доллары
     /// @param token - токен на фид eth/usd, btc/usd
     /// @param amount - количество залога в вей
+    /// @return USD 1e18
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeeds = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeeds.latestRoundData();
