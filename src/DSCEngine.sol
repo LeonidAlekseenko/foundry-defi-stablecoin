@@ -127,7 +127,9 @@ contract DSCEngine is ReentrancyGuard {
 
     function burnDsc() public {}
 
+
     function liquidate() external {}
+
 
     /// Фактор здоровья
     /// @param user - Адресс пользователя
@@ -143,6 +145,7 @@ contract DSCEngine is ReentrancyGuard {
         // 500е18 * 1е18 = 500е36, 500e36 / 500e18 = 1e18
     }
 
+
     /// функция реверта если _healthFactor < 1e18
     /// @param user - адр польз
     function _revertIfHealthFactorIsBroken(address user) internal view {
@@ -152,10 +155,12 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+
     /*//////////////////////////////////////////////////////////////
                                 Getters
     //////////////////////////////////////////////////////////////*/
     function getHealthFactor(address user) public view {}
+    
 
     /// Стоимость всего залога в долларах США
     /// @param user - адрес пользователя.
@@ -167,6 +172,7 @@ contract DSCEngine is ReentrancyGuard {
             totalCollateralValueInUsd += getUsdValue(token, amount);
         }
     }
+
 
     /// Общее количество отчеканенных DSC, стоимость всего залога в долларах США для одного пользователя
     /// @param user - адрес пользователя
@@ -180,6 +186,7 @@ contract DSCEngine is ReentrancyGuard {
         totalDscMinted = s_DSCMinted[user];
         collateralValueInUsd = getAccountCollateralValue(user);
     }
+
 
     /// переводит токены в доллары
     /// @param token - токен на фид eth/usd, btc/usd
