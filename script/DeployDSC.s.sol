@@ -5,12 +5,11 @@ import {Script} from "forge-std/Script.sol";
 import {DecentralizedStableCoin} from "../src/DecentralizedStableCoin.sol";
 import {DSCEngine} from "../src/DSCEngine.sol";
 
-
 contract DeployDsc is Script {
-    function run()  external returns (DecentralizedStableCoin, DSCEngine) {
+    function run() external returns (DecentralizedStableCoin, DSCEngine) {
         vm.startBroadcast();
-            DecentralizedStableCoin dsc = new DecentralizedStableCoin();
-            //DSCEngine engine = new DSCEngine();
+        DecentralizedStableCoin dsc = new DecentralizedStableCoin();
+        //DSCEngine engine = new DSCEngine();
         vm.stopBroadcast();
     }
 }
