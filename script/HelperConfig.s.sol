@@ -41,8 +41,8 @@ contract HelperConfig is Script {
         vm.startBroadcast();
          // Для локальной сети (Anvil) создаём mock-оракул
         MockV3Aggregator ethUsdPriceFeed = new MockV3Aggregator(
-            DECIMALS,         // Количество децималей (например, 8)
-            ETH_USD_PRICE     // Начальная цена ETH в USD
+            DECIMALS,             // Количество децималей (например, 8)
+            ETH_USD_PRICE         // Начальная цена ETH в USD
             );
 
         
