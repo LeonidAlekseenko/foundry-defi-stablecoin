@@ -181,13 +181,15 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     /// переводит токены в доллары
-    /// @param token - токен на фид eth/usd, btc/usd
+    /// @param token - токен адрес контракта
     /// @param amount - количество залога в вей
     /// @return USD 1e18
     function getUsdValue(address token, uint256 amount) public view returns (uint256) {
         AggregatorV3Interface priceFeeds = AggregatorV3Interface(s_priceFeeds[token]);
         (, int256 price,,,) = priceFeeds.latestRoundData();
 
+        //Масштабирование цены: uint256(price) * ADDITIONAL_FEED_PRECISION 
+        //приводит цену из 8 знаков (стандарт Chainlink для USD) к 18 знакам.
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
 }
