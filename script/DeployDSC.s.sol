@@ -8,7 +8,7 @@ import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployDsc is Script {
     address[] public tokenAddresses;
-    address[] public priceFeedAddresses; 
+    address[] public priceFeedAddresses;
 
     function run() external returns (DecentralizedStableCoin, DSCEngine, HelperConfig) {
         HelperConfig config = new HelperConfig();
