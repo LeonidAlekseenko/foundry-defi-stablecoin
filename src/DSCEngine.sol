@@ -29,6 +29,11 @@ contract DSCEngine is ReentrancyGuard {
     mapping(address token => address priceFeed) private s_priceFeeds;
 
     /// @dev внесенные средства
+    // 📦  Alice (0xaaa...)
+    //         ├── [ Ячейка WETH (0x111...) ] ──> 📄 Баланс: 5.0
+    //         ├── [ Ячейка WBTC (0x222...) ] ──> 📄 Баланс: 0.1
+    //         └── [ Ячейка LINK (0x333...) ] ──> 📄 Баланс: 100.0
+
     mapping(address user => mapping(address token => uint256 amount)) private s_collateralDeposited;
 
     /// @dev отчеканенные dsc
@@ -55,12 +60,21 @@ contract DSCEngine is ReentrancyGuard {
         _;
     }
 
+    // modifier isAlowedToken(address token) {
+    //     if (address(token) == address(0)) {
+    //         revert DSCEngine__NoAllowedToken();
+    //     }
+    //     _;
+    // }
+
     modifier isAlowedToken(address token) {
-        if (address(token) == address(0)) {
-            revert DSCEngine__NoAllowedToken();
+    // Если для этого токена адрес ценового фида равен нулю, значит токен не разрешен!
+        if (s_priceFeeds[token] == address(0)) {
+        revert DSCEngine__NoAllowedToken();
         }
         _;
     }
+
 
     /*//////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////*/
@@ -85,13 +99,24 @@ contract DSCEngine is ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /*//////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////*/
-    function depositCollateralAndMintDsc() external {}
+
+    /// @dev Функция внесения залога и чеканка
+    function depositCollateralAndMintDsc(
+        address tocenCollateralAddress, 
+        uint256 amountCollateral, 
+        uint256 amountDscToMint
+        ) external {
+        depositCollateral(tocenCollateralAddress, amountCollateral);
+        mintDsc(amountDscToMint);
+
+    }
+
 
     /// @dev Функция внесения залога
     /// @param tokenCollateralAddress - адрес залогового токена
     /// @param amountCollateral - сумма залога
     function depositCollateral(address tokenCollateralAddress, uint256 amountCollateral)
-        external
+        public
         moreThanZero(amountCollateral)
         isAlowedToken(tokenCollateralAddress)
         nonReentrant
@@ -107,12 +132,24 @@ contract DSCEngine is ReentrancyGuard {
 
     function redemCollateralForDsc() external {}
 
-    function redeemCollateral() external {}
+
+    /// @dev выкуп залога
+    /// @param tokenCollateralAddress -
+    /// @param amountCollateral -
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral) external nonReentrant {
+
+
+
+
+
+
+
+    }
 
     /// Минт стейбла
     /// @param amountDscToMint - количество стейблов
     /// @dev  _revertIfHealthFactorIsBroken(msg.sender) revert if HF < 1e18
-    function mintDsc(uint256 amountDscToMint) external moreThanZero(amountDscToMint) nonReentrant {
+    function mintDsc(uint256 amountDscToMint) public moreThanZero(amountDscToMint) nonReentrant {
         s_DSCMinted[msg.sender] += amountDscToMint;
         _revertIfHealthFactorIsBroken(msg.sender);
         bool minted = i_dsc.mint(msg.sender, amountDscToMint);
@@ -196,6 +233,6 @@ contract DSCEngine is ReentrancyGuard {
 
 
 
-    
+
 }
 

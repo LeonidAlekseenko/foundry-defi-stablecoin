@@ -17,6 +17,7 @@ contract DSCEngineTest is Test {
     address btcUsdPriceFeed;
     address weth;
     address wbtc;
+    address wbeth = 0xa2E3356610840701BDf5611a53974510Ae27E2e1;
 
     //берет строку-псевдоним и превращает её в Ethereum-адрес.
     address public user = makeAddr("user");
@@ -98,9 +99,7 @@ contract DSCEngineTest is Test {
     }
 
 
-
     function testRevertsisAlowedToken() public {
-
 
         //Она ожидает, что следующая строчка кода вызовет указанную ошибку.
         vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector);
@@ -109,6 +108,21 @@ contract DSCEngineTest is Test {
         engine.depositCollateral(address(0), 1000000000);
 
     }
+
+
+    function testRevertsIfTokenNotAllowed() public {
+    // 1. Создаем случайный адрес, которого точно нет в списке разрешенных
+        address ranToken = makeAddr("randomToken"); 
+    
+    // 2. Ожидаем именно ошибку модификатора (токен не разрешен)
+        vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector); 
+    
+    // 3. Вызываем функцию
+        engine.depositCollateral(ranToken, AMOUNT_COLLATERAL);
+    }
+
+
+    
 
 
 
