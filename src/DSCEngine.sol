@@ -49,6 +49,7 @@ contract DSCEngine is ReentrancyGuard {
                                  Event
     //////////////////////////////////////////////////////////////*/
     event CollateralDeposited(address indexed user, address indexed token, uint256 indexed amount);
+    event CollateralRedeemed(address indexed user, address indexed token, uint256 indexed amount);
 
     /*/////////////////////////////////////////////////////////////
                                 Modifier
@@ -68,13 +69,12 @@ contract DSCEngine is ReentrancyGuard {
     // }
 
     modifier isAlowedToken(address token) {
-    // Если для этого токена адрес ценового фида равен нулю, значит токен не разрешен!
+        // Если для этого токена адрес ценового фида равен нулю, значит токен не разрешен!
         if (s_priceFeeds[token] == address(0)) {
-        revert DSCEngine__NoAllowedToken();
+            revert DSCEngine__NoAllowedToken();
         }
         _;
     }
-
 
     /*//////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////*/
@@ -102,15 +102,13 @@ contract DSCEngine is ReentrancyGuard {
 
     /// @dev Функция внесения залога и чеканка
     function depositCollateralAndMintDsc(
-        address tocenCollateralAddress, 
-        uint256 amountCollateral, 
+        address tocenCollateralAddress,
+        uint256 amountCollateral,
         uint256 amountDscToMint
-        ) external {
+    ) external {
         depositCollateral(tocenCollateralAddress, amountCollateral);
         mintDsc(amountDscToMint);
-
     }
-
 
     /// @dev Функция внесения залога
     /// @param tokenCollateralAddress - адрес залогового токена
@@ -132,18 +130,21 @@ contract DSCEngine is ReentrancyGuard {
 
     function redemCollateralForDsc() external {}
 
-
     /// @dev выкуп залога
     /// @param tokenCollateralAddress -
     /// @param amountCollateral -
-    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral) external nonReentrant {
-
-
-
-
-
-
-
+    function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
+        external
+        moreThanZero(amountCollateral)
+        nonReentrant
+    {
+        s_collateralDeposited[msg.sender][tokenCollateralAddress] -= amountCollateral;
+        emit CollateralRedeemed(msg.sender, tokenCollateralAddress, amountCollateral);
+        bool success = IERC20(tokenCollateralAddress).transfer(msg.sender, amountCollateral);
+        if (!success) {
+            DSCEngine__TransferFailed;
+        }
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
     /// Минт стейбла
@@ -226,13 +227,5 @@ contract DSCEngine is ReentrancyGuard {
         //приводит цену из 8 знаков (стандарт Chainlink для USD) к 18 знакам.
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
-
-
-
-
-
-
-
-
 }
 

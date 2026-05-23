@@ -21,7 +21,7 @@ contract DSCEngineTest is Test {
 
     //берет строку-псевдоним и превращает её в Ethereum-адрес.
     address public user = makeAddr("user");
-    
+
     //сумма обеспечения
     uint256 public constant AMOUNT_COLLATERAL = 10 ether;
     uint256 public constant STARTINS_ERC20_BALANCE = 10 ether;
@@ -77,16 +77,15 @@ contract DSCEngineTest is Test {
                          DEPOSIT COLLATERAL TESTS
      //////////////////////////////////////////////////////////////*/
     function testRevertsIfCollateralZero() public {
-
         //имитирует действия указанного пользователя.
         vm.startPrank(user);
 
-        //Дает разрешение контракту engine тратить токены. 
-        //Это хороший тон в тестах, хотя при передаче нуля approve 
+        //Дает разрешение контракту engine тратить токены.
+        //Это хороший тон в тестах, хотя при передаче нуля approve
         //технически не влияет на проверку revert.
         ERC20Mock(weth).approve(address(engine), AMOUNT_COLLATERAL);
 
-        //шпаргалка для Foundry. 
+        //шпаргалка для Foundry.
         // ожидает, что следующая строчка кода вызовет указанную ошибку.
         vm.expectRevert(DSCEngine.DSCEngine__NeedsMoreThanZero.selector);
 
@@ -95,48 +94,24 @@ contract DSCEngineTest is Test {
 
         //завершает симуляцию действий пользователя.
         vm.stopPrank();
-
     }
 
-
     function testRevertsisAlowedToken() public {
-
         //Она ожидает, что следующая строчка кода вызовет указанную ошибку.
         vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector);
 
         //проверяяем на нулевой адрес
         engine.depositCollateral(address(0), 1000000000);
-
     }
-
 
     function testRevertsIfTokenNotAllowed() public {
-    // 1. Создаем случайный адрес, которого точно нет в списке разрешенных
-        address ranToken = makeAddr("randomToken"); 
-    
-    // 2. Ожидаем именно ошибку модификатора (токен не разрешен)
-        vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector); 
-    
-    // 3. Вызываем функцию
+        // 1. Создаем случайный адрес, которого точно нет в списке разрешенных
+        address ranToken = makeAddr("randomToken");
+
+        // 2. Ожидаем именно ошибку модификатора (токен не разрешен)
+        vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector);
+
+        // 3. Вызываем функцию
         engine.depositCollateral(ranToken, AMOUNT_COLLATERAL);
     }
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
