@@ -157,9 +157,19 @@ contract DSCEngine is ReentrancyGuard {
         if (!minted) {
             revert DSCEngine__MintFailed();
         }
+        _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function burnDsc() public {}
+
+    function burnDsc(uint256 amount) external moreThanZero(amount) {
+        s_DSCMinted[msg.sender] -= amount;
+        bool success = i_dsc.transferFrom(msg.sender, address(this), amount);
+        if (!success) {
+            revert DSCEngine__TransferFailed();
+        }
+        i_dsc.burn(amount);
+        _revertIfHealthFactorIsBroken(msg.sender);
+    }
 
     function liquidate() external {}
 
@@ -202,6 +212,7 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
+
     /// Общее количество отчеканенных DSC, стоимость всего залога в долларах США для одного пользователя
     /// @param user - адрес пользователя
     /// @return totalDscMinted - объем отчеканенных монет DSC
@@ -215,6 +226,7 @@ contract DSCEngine is ReentrancyGuard {
         collateralValueInUsd = getAccountCollateralValue(user);
     }
 
+
     /// переводит токены в доллары
     /// @param token - токен адрес контракта
     /// @param amount - количество залога в вей
@@ -227,5 +239,15 @@ contract DSCEngine is ReentrancyGuard {
         //приводит цену из 8 знаков (стандарт Chainlink для USD) к 18 знакам.
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
+
+
+
+
+
+
+
+
+
+
 }
 

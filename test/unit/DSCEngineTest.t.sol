@@ -44,6 +44,7 @@ contract DSCEngineTest is Test {
         assertEq(expectedUsd, actualUsd);
     }
 
+
     function testGetUsdBtcValue() public {
         uint256 btcAmount = 15e18;
         uint256 expectedUsd = 15_000e18;
@@ -51,12 +52,14 @@ contract DSCEngineTest is Test {
         assertEq(expectedUsd, actualUsd);
     }
 
+
     function testGetUsdValueWithZeroAmount() public {
         uint256 amount = 0;
         uint256 expectedUsd = 0;
         uint256 actualUsd = engine.getUsdValue(weth, amount);
         assertEq(expectedUsd, actualUsd);
     }
+
 
     function testGetUsdValueWithTinyAmount() public {
         uint256 amount = 1; // 1 wei
@@ -66,12 +69,14 @@ contract DSCEngineTest is Test {
         assertEq(expectedUsd, actualUsd);
     }
 
+
     function testGetUsdValueNewSintax() public {
         uint256 amount = 1 ether; // 1e18
         uint256 expectedUsd = 2000e18;
         uint256 actualUsd = engine.getUsdValue(weth, amount);
         assertEq(expectedUsd, actualUsd);
     }
+
 
     /*//////////////////////////////////////////////////////////////
                          DEPOSIT COLLATERAL TESTS
@@ -96,6 +101,7 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
+
     function testRevertsisAlowedToken() public {
         //Она ожидает, что следующая строчка кода вызовет указанную ошибку.
         vm.expectRevert(DSCEngine.DSCEngine__NoAllowedToken.selector);
@@ -103,6 +109,7 @@ contract DSCEngineTest is Test {
         //проверяяем на нулевой адрес
         engine.depositCollateral(address(0), 1000000000);
     }
+
 
     function testRevertsIfTokenNotAllowed() public {
         // 1. Создаем случайный адрес, которого точно нет в списке разрешенных
@@ -114,4 +121,19 @@ contract DSCEngineTest is Test {
         // 3. Вызываем функцию
         engine.depositCollateral(ranToken, AMOUNT_COLLATERAL);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 }
