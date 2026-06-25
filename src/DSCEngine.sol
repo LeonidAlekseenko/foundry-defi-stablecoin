@@ -15,6 +15,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFailed();
     error DSCEngine__HealthFactorIsBellowMinimum();
     error DSCEngine__MintFailed();
+    error DSCEngine__HealthFactorOk();
 
     /*//////////////////////////////////////////////////////////////
                             State Variables
@@ -60,13 +61,6 @@ contract DSCEngine is ReentrancyGuard {
         }
         _;
     }
-
-    // modifier isAlowedToken(address token) {
-    //     if (address(token) == address(0)) {
-    //         revert DSCEngine__NoAllowedToken();
-    //     }
-    //     _;
-    // }
 
     modifier isAlowedToken(address token) {
         // Если для этого токена адрес ценового фида равен нулю, значит токен не разрешен!
@@ -128,13 +122,22 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-    function redemCollateralForDsc() external {}
+    /// выкуп залога и сжигание стейблкоинов
+    /// @param tokenCollateralAddress - адрес залогового токена weth, wbtc
+    /// @param amountCollateral - количество выкупаемы токенов
+    /// @param amountDscToBurn - количество сжигаемых токенов
+    function redemCollateralForDsc(address tokenCollateralAddress, uint256 amountCollateral, uint256 amountDscToBurn)
+        external
+    {
+        burnDsc(amountDscToBurn);
+        redeemCollateral(tokenCollateralAddress, amountCollateral);
+    }
 
     /// @dev выкуп залога
-    /// @param tokenCollateralAddress -
-    /// @param amountCollateral -
+    /// @param tokenCollateralAddress - адрес залогового токена weth, wbtc
+    /// @param amountCollateral - количество выкупаемых залоговых токенов
     function redeemCollateral(address tokenCollateralAddress, uint256 amountCollateral)
-        external
+        public
         moreThanZero(amountCollateral)
         nonReentrant
     {
@@ -160,8 +163,9 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-
-    function burnDsc(uint256 amount) external moreThanZero(amount) {
+    /// сжигаем стейблкоины
+    /// @param amount - количество сжигаемых стейблкоинов
+    function burnDsc(uint256 amount) public moreThanZero(amount) {
         s_DSCMinted[msg.sender] -= amount;
         bool success = i_dsc.transferFrom(msg.sender, address(this), amount);
         if (!success) {
@@ -171,7 +175,12 @@ contract DSCEngine is ReentrancyGuard {
         _revertIfHealthFactorIsBroken(msg.sender);
     }
 
-    function liquidate() external {}
+    function liquidate(address collateral, address user, uint256 debtToCover) external moreThanZero(debtToCover) nonReentrant{
+        uint256 startingUserHealthFactor = _healthFactor(user);
+        if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
+            revert DSCEngine__HealthFactorOk;
+        }
+    }
 
     /// Фактор здоровья
     /// @param user - Адресс пользователя
@@ -212,7 +221,6 @@ contract DSCEngine is ReentrancyGuard {
         }
     }
 
-
     /// Общее количество отчеканенных DSC, стоимость всего залога в долларах США для одного пользователя
     /// @param user - адрес пользователя
     /// @return totalDscMinted - объем отчеканенных монет DSC
@@ -226,7 +234,6 @@ contract DSCEngine is ReentrancyGuard {
         collateralValueInUsd = getAccountCollateralValue(user);
     }
 
-
     /// переводит токены в доллары
     /// @param token - токен адрес контракта
     /// @param amount - количество залога в вей
@@ -239,15 +246,5 @@ contract DSCEngine is ReentrancyGuard {
         //приводит цену из 8 знаков (стандарт Chainlink для USD) к 18 знакам.
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
-
-
-
-
-
-
-
-
-
-
 }
 
