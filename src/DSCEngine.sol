@@ -25,6 +25,7 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant LIQUIDATION_THRESHOLD = 50; //200$
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
+    uint256 private constant LIQUDATION_BONUS = 10;
 
     /// @dev фиды
     mapping(address token => address priceFeed) private s_priceFeeds;
@@ -180,7 +181,14 @@ contract DSCEngine is ReentrancyGuard {
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
             revert DSCEngine__HealthFactorOk;
         }
+
+        uint256 tokenAmountFromDebtCovered = getTokenAmountFromUsd(collateral, debtToCover);
+        uint256 bonusCollateral = (tokenAmountFromDebtCovered * LIQUDATION_BONUS) / LIQUIDATION_PRECISION;
+        uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered + bonusCollateral;
+
+
     }
+
 
     /// Фактор здоровья
     /// @param user - Адресс пользователя
@@ -246,5 +254,16 @@ contract DSCEngine is ReentrancyGuard {
         //приводит цену из 8 знаков (стандарт Chainlink для USD) к 18 знакам.
         return ((uint256(price) * ADDITIONAL_FEED_PRECISION) * amount) / PRECISION;
     }
+
+
+    function getTokenAmountFromUsd(address token, uint256 usdAmountInWei) public view returns (uint256){
+        AggregatorV3Interface priceFeed = AggregatorV3Interface(s_priceFeeds[token]);
+        (, int256 price,,,) = priceFeed.latestRoundData();
+        return (usdAmountInWei * PRECISION) / (uint256(price) * ADDITIONAL_FEED_PRECISION); 
+
+    }
+
+
+
 }
 
