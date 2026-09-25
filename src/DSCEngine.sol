@@ -245,7 +245,7 @@ contract DSCEngine is ReentrancyGuard {
         collateralValueInUsd = getAccountCollateralValue(user);
     }
 
-    /// переводит токены в доллары
+    /// переводит токены в доллары сша
     /// @param token - токен адрес контракта
     /// @param amount - количество залога в вей
     /// @return USD 1e18
